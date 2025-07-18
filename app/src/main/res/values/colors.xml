@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="appBackground">#FFFFFF</color> <!-- Light mode background -->\
+    <color name="textPrimary">#000000</color>
+    <color name="textSecondary">#444444</color>
+    <color name="cardBackground">#FFFFFF</color>
+    <color name="inputBackground">#EEEEEE</color>
+    <color name="headerBackground">#D3D3D3</color>
+    <color name="buttonText">#000000</color>
+    <color name="errorRed">#D32F2F</color>
+    <color name="table_header">#EEEEEE</color>
+        <!-- Blue family colors for Light Mode -->
+        <color name="md_theme_light_primary">#1E88E5</color>          <!-- Medium Blue -->
+        <color name="md_theme_light_onPrimary">#FFFFFF</color>       <!-- White text on primary -->
+        <color name="md_theme_light_primaryContainer">#BBDEFB</color> <!-- Light Blue Container -->
+        <color name="md_theme_light_onPrimaryContainer">#0D47A1</color> <!-- Dark Blue Text -->
+
+        <color name="md_theme_light_secondary">#1565C0</color>        <!-- Dark Blue -->
+        <color name="md_theme_light_onSecondary">#FFFFFF</color>
+        <color name="md_theme_light_secondaryContainer">#90CAF9</color>
+        <color name="md_theme_light_onSecondaryContainer">#0D47A1</color>
+
+        <color name="md_theme_light_tertiary">#64B5F6</color>         <!-- Lighter Blue -->
+        <color name="md_theme_light_onTertiary">#000000</color>
+        <color name="md_theme_light_tertiaryContainer">#E3F2FD</color>
+        <color name="md_theme_light_onTertiaryContainer">#0D47A1</color>
+
+        <!-- Background and surface colors -->
+        <color name="md_theme_light_background">#FFFFFF</color>
+        <color name="md_theme_light_onBackground">#000000</color>
+        <color name="md_theme_light_surface">#FFFFFF</color>
+        <color name="md_theme_light_onSurface">#000000</color>
+</resources>

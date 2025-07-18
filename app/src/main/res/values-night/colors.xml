@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="appBackground">#121212</color> <!-- Dark mode background -->
+    <color name="textPrimary">#FFFFFF</color>
+    <color name="textSecondary">#CCCCCC</color>
+    <color name="cardBackground">#1E1E1E</color>
+    <color name="inputBackground">#2A2A2A</color>
+    <color name="headerBackground">#333333</color>
+    <color name="buttonText">#FFFFFF</color>
+    <color name="table_header">#333333</color>
+        <!-- Blue family colors for Dark Mode -->
+        <color name="md_theme_dark_primary">#90CAF9</color>           <!-- Light Blue -->
+        <color name="md_theme_dark_onPrimary">#0D47A1</color>         <!-- Dark Blue Text -->
+        <color name="md_theme_dark_primaryContainer">#1565C0</color>  <!-- Darker Blue -->
+        <color name="md_theme_dark_onPrimaryContainer">#BBDEFB</color>
+
+        <color name="md_theme_dark_secondary">#64B5F6</color>
+        <color name="md_theme_dark_onSecondary">#0D47A1</color>
+        <color name="md_theme_dark_secondaryContainer">#1E88E5</color>
+        <color name="md_theme_dark_onSecondaryContainer">#BBDEFB</color>
+
+        <color name="md_theme_dark_tertiary">#42A5F5</color>
+        <color name="md_theme_dark_onTertiary">#FFFFFF</color>
+        <color name="md_theme_dark_tertiaryContainer">#0D47A1</color>
+        <color name="md_theme_dark_onTertiaryContainer">#90CAF9</color>
+
+        <!-- Background and surface colors -->
+        <color name="md_theme_dark_background">#121212</color>
+        <color name="md_theme_dark_onBackground">#FFFFFF</color>
+        <color name="md_theme_dark_surface">#121212</color>
+        <color name="md_theme_dark_onSurface">#FFFFFF</color>
+</resources>
+

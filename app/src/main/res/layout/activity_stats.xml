@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="24dp"
+    android:background="?attr/colorSurface">
+
+    <LinearLayout
+        android:id="@+id/activity_stats"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center_horizontal">
+
+        <!-- Button Group -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:layout_marginBottom="16dp">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnToday"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Today"
+                android:layout_marginEnd="6dp"/>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnDay"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Day"
+                android:layout_marginEnd="6dp"/>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnMonth"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Month"/>
+        </LinearLayout>
+
+        <!-- Legend and Title -->
+        <TextView
+            android:id="@+id/statsLegend"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="\nWT = Wake Time  HT = Health Time  \nLT = Learning Time  IT = Implementation Time"
+            android:textSize="14sp"
+            android:textColor="@color/textSecondary"
+            android:layout_marginBottom="12dp"
+            android:textAlignment="center" />
+
+        <TextView
+            android:id="@+id/selectedPeriodText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Showing: Today"
+            android:textStyle="bold"
+            android:textSize="18sp"
+            android:textColor="@color/textPrimary"
+            android:layout_marginBottom="12dp" />
+
+        <!-- Table View -->
+        <HorizontalScrollView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:fillViewport="true">
+
+            <TableLayout
+                android:id="@+id/statsTable"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:stretchColumns="1,2,3,4"
+                android:shrinkColumns="1,2,3,4"
+                android:background="@android:color/transparent" />
+        </HorizontalScrollView>
+    </LinearLayout>
+</ScrollView>
