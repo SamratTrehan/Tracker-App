@@ -165,7 +165,7 @@ public class StatsActivity extends AppCompatActivity {
                     "--",
                     DateUtils.formatTime(targetWake),
                     DateUtils.formatTime(avgWake),
-                    calculateDeviation(avgWake, targetWake));
+                    -calculateDeviation(avgWake, targetWake));
 
             appendRow("HT",
                     "--",
@@ -270,23 +270,5 @@ public class StatsActivity extends AppCompatActivity {
         if (target == 0) return 0f;
         float result = ((float) (value - target) / target) * 100f;
         return result;
-    }
-
-    private int parseTimeToMinutes(String timeStr) {
-        if (timeStr == null || timeStr.equals("--")) return Integer.MAX_VALUE;
-        try {
-            String[] parts = timeStr.split(" ");
-            String[] hm = parts[0].split(":");
-            int h = Integer.parseInt(hm[0]);
-            int m = Integer.parseInt(hm[1]);
-            if (parts[1].equalsIgnoreCase("PM") && h != 12) {
-                h += 12;
-            } else if (parts[1].equalsIgnoreCase("AM") && h == 12) {
-                h = 0;
-            }
-            return h * 60 + m;
-        } catch (Exception e) {
-            return Integer.MAX_VALUE;
-        }
     }
 }
