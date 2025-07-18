@@ -15,7 +15,22 @@ import android.widget.TextView;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
 
+import com.github.mikephil.charting.charts.BarChart;
+import com.github.mikephil.charting.formatter.ValueFormatter;
+import com.github.mikephil.charting.components.Legend;
+import com.github.mikephil.charting.components.XAxis;
+import com.github.mikephil.charting.components.YAxis;
+import com.github.mikephil.charting.data.BarData;
+import com.github.mikephil.charting.data.BarDataSet;
+import com.github.mikephil.charting.data.BarEntry;
+import com.github.mikephil.charting.data.BarEntry;
+import com.github.mikephil.charting.data.BarDataSet;
+import com.github.mikephil.charting.data.BarData;
+
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.Locale;
 
 public class StatsActivity extends AppCompatActivity {
@@ -24,6 +39,7 @@ public class StatsActivity extends AppCompatActivity {
     TextView selectedPeriodText;
     TableLayout statsTable;
     DBHelper dbHelper;
+    BarChart barChart;
 
     String selectedDate;
     String selectedMonth;
@@ -42,6 +58,7 @@ public class StatsActivity extends AppCompatActivity {
         selectedPeriodText = findViewById(R.id.selectedPeriodText);
         statsTable = findViewById(R.id.statsTable);
         dbHelper = new DBHelper(this);
+        barChart = findViewById(R.id.barChart);
 
         selectedDate = DateUtils.getTodayDate();
         selectedMonth = selectedDate.substring(0, 7);
@@ -69,6 +86,121 @@ public class StatsActivity extends AppCompatActivity {
         btnMonth.setOnClickListener(v -> showMonthYearPicker());
 
         displayStatsForDay(selectedDate);
+        displayWeeklyBarChart();
+    }
+
+    private void displayWeeklyBarChart() {
+        // Prepare arrays for 7 days of data
+        boolean isDarkTheme = (getResources().getConfiguration().uiMode
+                & android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES;
+        ArrayList<String> dayLabels = new ArrayList<>();
+        ArrayList<BarEntry> htEntries = new ArrayList<>();
+        ArrayList<BarEntry> ltEntries = new ArrayList<>();
+        ArrayList<BarEntry> itEntries = new ArrayList<>();
+
+        // Build last 7 dates
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+        SimpleDateFormat labelSdf = new SimpleDateFormat("MM/dd", Locale.getDefault());
+        Calendar cal = Calendar.getInstance();
+
+        for (int i = 6; i >= 0; i--) {
+            cal.setTimeInMillis(System.currentTimeMillis());
+            cal.add(Calendar.DAY_OF_YEAR, -i);
+
+            String date = sdf.format(cal.getTime());
+            dayLabels.add(labelSdf.format(cal.getTime()));
+
+            int index = 6 - i;
+
+            Cursor c = dbHelper.getEntryByDate(date);
+            int ht = 0, lt = 0, it = 0;
+            if (c != null && c.moveToFirst()) {
+                ht = c.getInt(2);
+                lt = c.getInt(3);
+                it = c.getInt(4);
+            }
+            if (c != null) c.close();
+
+            htEntries.add(new BarEntry(index, ht));
+            ltEntries.add(new BarEntry(index, lt));
+            itEntries.add(new BarEntry(index, it));
+        }
+
+        // Make 3 BarDataSets
+        BarDataSet setHT = new BarDataSet(htEntries, "Health Time");
+        setHT.setColor(Color.parseColor("#2196F3")); // Blue
+        BarDataSet setLT = new BarDataSet(ltEntries, "Learning Time");
+        setLT.setColor(Color.parseColor("#43A047")); // Green
+        BarDataSet setIT = new BarDataSet(itEntries, "Implementation Time");
+        setIT.setColor(Color.parseColor("#FB8C00")); // Orange
+
+        // Grouped Bar Chart
+        float groupSpace = 0.12f;
+        float barSpace = 0.04f;
+        float barWidth = 0.26f;
+
+        BarData data = new BarData(setHT, setLT, setIT);
+        data.setBarWidth(barWidth);
+
+        barChart.setData(data);
+
+        // Setup axis
+        XAxis xAxis = barChart.getXAxis();
+        xAxis.setValueFormatter(new ValueFormatter() {
+            @Override
+            public String getFormattedValue(float value) {
+                int i = Math.round(value);
+                if (i >= 0 && i < dayLabels.size()) {
+                    return dayLabels.get(i);
+                } else {
+                    return "";
+                }
+            }
+        });
+        xAxis.setGranularity(1f);
+        xAxis.setPosition(XAxis.XAxisPosition.BOTTOM);
+        xAxis.setDrawGridLines(false);
+
+        YAxis leftAxis = barChart.getAxisLeft();
+        leftAxis.setAxisMinimum(0f);
+
+        YAxis rightAxis = barChart.getAxisRight();
+        rightAxis.setEnabled(false);
+
+        barChart.getDescription().setText("Last 7 Days (by log date)");
+        barChart.setDrawGridBackground(false);
+        barChart.getLegend().setVerticalAlignment(Legend.LegendVerticalAlignment.TOP);
+        barChart.getLegend().setHorizontalAlignment(Legend.LegendHorizontalAlignment.RIGHT);
+        int gridColor, axisTextColor, chartBgColor;
+        if (isDarkTheme) {
+            gridColor = getResources().getColor(R.color.textSecondary);
+            axisTextColor = getResources().getColor(R.color.textPrimary);
+            chartBgColor = getResources().getColor(R.color.md_theme_dark_surface);
+        } else {
+            gridColor = getResources().getColor(R.color.textSecondary);
+            axisTextColor = getResources().getColor(R.color.textPrimary);
+            chartBgColor = getResources().getColor(R.color.md_theme_light_surface);
+        }
+
+        // Chart background and grid
+        barChart.setBackgroundColor(chartBgColor);
+        barChart.getXAxis().setTextColor(axisTextColor);
+        barChart.getAxisLeft().setTextColor(axisTextColor);
+        barChart.getAxisRight().setTextColor(axisTextColor);
+        barChart.getXAxis().setGridColor(gridColor);
+        barChart.getAxisLeft().setGridColor(gridColor);
+        barChart.getAxisRight().setGridColor(gridColor);
+        barChart.getLegend().setTextColor(axisTextColor);
+        barChart.getDescription().setTextColor(axisTextColor);
+        // Animate
+        barChart.animateY(1000);
+
+        // Group bars
+        barChart.getXAxis().setAxisMinimum(-0.5f);
+        barChart.getXAxis().setAxisMaximum(6.5f);
+        barChart.groupBars(0f, groupSpace, barSpace);
+
+        barChart.invalidate();
     }
 
     private void displayStatsForDay(String date) {
