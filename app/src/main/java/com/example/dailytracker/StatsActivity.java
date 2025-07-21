@@ -15,22 +15,9 @@ import android.widget.TextView;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
 
-import com.github.mikephil.charting.charts.BarChart;
-import com.github.mikephil.charting.formatter.ValueFormatter;
-import com.github.mikephil.charting.components.Legend;
-import com.github.mikephil.charting.components.XAxis;
-import com.github.mikephil.charting.components.YAxis;
-import com.github.mikephil.charting.data.BarData;
-import com.github.mikephil.charting.data.BarDataSet;
-import com.github.mikephil.charting.data.BarEntry;
-import com.github.mikephil.charting.data.BarEntry;
-import com.github.mikephil.charting.data.BarDataSet;
-import com.github.mikephil.charting.data.BarData;
+import com.google.android.material.button.MaterialButton;
 
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.Collections;
 import java.util.Locale;
 
 public class StatsActivity extends AppCompatActivity {
@@ -38,16 +25,21 @@ public class StatsActivity extends AppCompatActivity {
     Button btnToday, btnDay, btnMonth;
     TextView selectedPeriodText;
     TableLayout statsTable;
+    TableLayout historyTable;
+    MaterialButton loadMoreBtn;
     DBHelper dbHelper;
-    BarChart barChart;
 
     String selectedDate;
     String selectedMonth;
 
+    // Paging state for history section
+    private static final int HISTORY_PAGE_SIZE = 30;
+    private int historyOffset = 0;
+    private int lastLoadedRows = 0; // for tracking how many were loaded last
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);
-
 
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_stats);
@@ -57,8 +49,10 @@ public class StatsActivity extends AppCompatActivity {
         btnMonth = findViewById(R.id.btnMonth);
         selectedPeriodText = findViewById(R.id.selectedPeriodText);
         statsTable = findViewById(R.id.statsTable);
+        historyTable = findViewById(R.id.historyTable);
+        loadMoreBtn = findViewById(R.id.loadMoreHistoryBtn);
+
         dbHelper = new DBHelper(this);
-        barChart = findViewById(R.id.barChart);
 
         selectedDate = DateUtils.getTodayDate();
         selectedMonth = selectedDate.substring(0, 7);
@@ -67,6 +61,7 @@ public class StatsActivity extends AppCompatActivity {
             selectedPeriodText.setText("Showing: Today");
             selectedDate = DateUtils.getTodayDate();
             displayStatsForDay(selectedDate);
+            resetHistory();
         });
 
         btnDay.setOnClickListener(v -> {
@@ -76,6 +71,7 @@ public class StatsActivity extends AppCompatActivity {
                         selectedDate = String.format(Locale.getDefault(), "%04d-%02d-%02d", year, month + 1, dayOfMonth);
                         selectedPeriodText.setText("Showing: " + selectedDate);
                         displayStatsForDay(selectedDate);
+                        resetHistory();
                     },
                     calendar.get(Calendar.YEAR),
                     calendar.get(Calendar.MONTH),
@@ -85,123 +81,22 @@ public class StatsActivity extends AppCompatActivity {
 
         btnMonth.setOnClickListener(v -> showMonthYearPicker());
 
+        // Load stats and history (first 30) on opening page
         displayStatsForDay(selectedDate);
-        displayWeeklyBarChart();
-    }
+        resetHistory();
 
-    private void displayWeeklyBarChart() {
-        // Prepare arrays for 7 days of data
-        boolean isDarkTheme = (getResources().getConfiguration().uiMode
-                & android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES;
-        ArrayList<String> dayLabels = new ArrayList<>();
-        ArrayList<BarEntry> htEntries = new ArrayList<>();
-        ArrayList<BarEntry> ltEntries = new ArrayList<>();
-        ArrayList<BarEntry> itEntries = new ArrayList<>();
-
-        // Build last 7 dates
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
-        SimpleDateFormat labelSdf = new SimpleDateFormat("MM/dd", Locale.getDefault());
-        Calendar cal = Calendar.getInstance();
-
-        for (int i = 6; i >= 0; i--) {
-            cal.setTimeInMillis(System.currentTimeMillis());
-            cal.add(Calendar.DAY_OF_YEAR, -i);
-
-            String date = sdf.format(cal.getTime());
-            dayLabels.add(labelSdf.format(cal.getTime()));
-
-            int index = 6 - i;
-
-            Cursor c = dbHelper.getEntryByDate(date);
-            int ht = 0, lt = 0, it = 0;
-            if (c != null && c.moveToFirst()) {
-                ht = c.getInt(2);
-                lt = c.getInt(3);
-                it = c.getInt(4);
-            }
-            if (c != null) c.close();
-
-            htEntries.add(new BarEntry(index, ht));
-            ltEntries.add(new BarEntry(index, lt));
-            itEntries.add(new BarEntry(index, it));
-        }
-
-        // Make 3 BarDataSets
-        BarDataSet setHT = new BarDataSet(htEntries, "Health Time");
-        setHT.setColor(Color.parseColor("#2196F3")); // Blue
-        BarDataSet setLT = new BarDataSet(ltEntries, "Learning Time");
-        setLT.setColor(Color.parseColor("#43A047")); // Green
-        BarDataSet setIT = new BarDataSet(itEntries, "Implementation Time");
-        setIT.setColor(Color.parseColor("#FB8C00")); // Orange
-
-        // Grouped Bar Chart
-        float groupSpace = 0.12f;
-        float barSpace = 0.04f;
-        float barWidth = 0.26f;
-
-        BarData data = new BarData(setHT, setLT, setIT);
-        data.setBarWidth(barWidth);
-
-        barChart.setData(data);
-
-        // Setup axis
-        XAxis xAxis = barChart.getXAxis();
-        xAxis.setValueFormatter(new ValueFormatter() {
-            @Override
-            public String getFormattedValue(float value) {
-                int i = Math.round(value);
-                if (i >= 0 && i < dayLabels.size()) {
-                    return dayLabels.get(i);
-                } else {
-                    return "";
-                }
-            }
+        loadMoreBtn.setOnClickListener(v -> {
+            historyOffset += lastLoadedRows; // move offset forward by how many we just loaded
+            displayHistorySection(false);
         });
-        xAxis.setGranularity(1f);
-        xAxis.setPosition(XAxis.XAxisPosition.BOTTOM);
-        xAxis.setDrawGridLines(false);
-
-        YAxis leftAxis = barChart.getAxisLeft();
-        leftAxis.setAxisMinimum(0f);
-
-        YAxis rightAxis = barChart.getAxisRight();
-        rightAxis.setEnabled(false);
-
-        barChart.getDescription().setText("Last 7 Days (by log date)");
-        barChart.setDrawGridBackground(false);
-        barChart.getLegend().setVerticalAlignment(Legend.LegendVerticalAlignment.TOP);
-        barChart.getLegend().setHorizontalAlignment(Legend.LegendHorizontalAlignment.RIGHT);
-        int gridColor, axisTextColor, chartBgColor;
-        if (isDarkTheme) {
-            gridColor = getResources().getColor(R.color.textSecondary);
-            axisTextColor = getResources().getColor(R.color.textPrimary);
-            chartBgColor = getResources().getColor(R.color.md_theme_dark_surface);
-        } else {
-            gridColor = getResources().getColor(R.color.textSecondary);
-            axisTextColor = getResources().getColor(R.color.textPrimary);
-            chartBgColor = getResources().getColor(R.color.md_theme_light_surface);
-        }
-
-        // Chart background and grid
-        barChart.setBackgroundColor(chartBgColor);
-        barChart.getXAxis().setTextColor(axisTextColor);
-        barChart.getAxisLeft().setTextColor(axisTextColor);
-        barChart.getAxisRight().setTextColor(axisTextColor);
-        barChart.getXAxis().setGridColor(gridColor);
-        barChart.getAxisLeft().setGridColor(gridColor);
-        barChart.getAxisRight().setGridColor(gridColor);
-        barChart.getLegend().setTextColor(axisTextColor);
-        barChart.getDescription().setTextColor(axisTextColor);
-        // Animate
-        barChart.animateY(1000);
-
-        // Group bars
-        barChart.getXAxis().setAxisMinimum(-0.5f);
-        barChart.getXAxis().setAxisMaximum(6.5f);
-        barChart.groupBars(0f, groupSpace, barSpace);
-
-        barChart.invalidate();
     }
+
+    private void resetHistory() {
+        historyOffset = 0;
+        displayHistorySection(true); // true = full refresh (clear table)
+    }
+
+    // ===== MAIN/DAY STATS LOGIC =====
 
     private void displayStatsForDay(String date) {
         statsTable.removeAllViews();
@@ -224,6 +119,8 @@ public class StatsActivity extends AppCompatActivity {
 
         addHeaderRow();
 
+        int[] averages = getOverallAverages(); // [wake, ht, lt, it]
+
         if (wake == -1) {
             TableRow row = new TableRow(this);
             TextView noData = new TextView(this);
@@ -234,28 +131,26 @@ public class StatsActivity extends AppCompatActivity {
             appendRow("WT",
                     DateUtils.formatTime(wake),
                     DateUtils.formatTime(targetWake),
-                    "-",
-                    calculateDeviation(wake, targetWake));
+                    DateUtils.formatTime(averages[0]));
 
             appendRow("HT",
                     ht + " mins",
                     targetHT + " mins",
-                    "-",
-                    calculateDeviation(ht, targetHT));
+                    averages[1] + " mins");
 
             appendRow("LT",
                     lt + " mins",
                     targetLT + " mins",
-                    "-",
-                    calculateDeviation(lt, targetLT));
+                    averages[2] + " mins");
 
             appendRow("IT",
                     it + " mins",
                     targetIT + " mins",
-                    "-",
-                    calculateDeviation(it, targetIT));
+                    averages[3] + " mins");
         }
     }
+
+    // ===== MONTH STATS LOGIC UNCHANGED =====
 
     private void displayStatsForMonth(String month) {
         statsTable.removeAllViews();
@@ -296,27 +191,161 @@ public class StatsActivity extends AppCompatActivity {
             appendRow("WT",
                     "--",
                     DateUtils.formatTime(targetWake),
-                    DateUtils.formatTime(avgWake),
-                    -calculateDeviation(avgWake, targetWake));
+                    DateUtils.formatTime(avgWake));
 
             appendRow("HT",
                     "--",
                     targetHT + " mins",
-                    avgHT + " mins",
-                    calculateDeviation(avgHT, targetHT));
+                    avgHT + " mins");
 
             appendRow("LT",
                     "--",
                     targetLT + " mins",
-                    avgLT + " mins",
-                    calculateDeviation(avgLT, targetLT));
+                    avgLT + " mins");
 
             appendRow("IT",
                     "--",
                     targetIT + " mins",
-                    avgIT + " mins",
-                    calculateDeviation(avgIT, targetIT));
+                    avgIT + " mins");
         }
+    }
+
+    // ===== HISTORY SECTION WITH APPEND =====
+
+    /**
+     * @param clearTable If true, clear the table and start fresh.
+     *                   If false, just append to existing rows.
+     */
+    private void displayHistorySection(boolean clearTable) {
+        if (clearTable) {
+            historyTable.removeAllViews();
+
+            TableRow header = new TableRow(this);
+            int headerColor = getThemeColor(com.google.android.material.R.attr.colorSurfaceVariant);
+            header.setBackgroundColor(headerColor);
+            header.addView(buildBoldCell("Date"));
+            header.addView(buildBoldCell("Wake-Up"));
+            header.addView(buildBoldCell("HT (min)"));
+            header.addView(buildBoldCell("LT (min)"));
+            header.addView(buildBoldCell("IT (min)"));
+            historyTable.addView(header);
+
+            historyOffset = 0; // reset paging
+        }
+
+        // Load next page of rows from current offset
+        Cursor cursor = dbHelper.getEntriesPaged(HISTORY_PAGE_SIZE, historyOffset);
+
+        int rows = 0;
+        if (cursor != null && cursor.moveToFirst()) {
+            do {
+                String date = cursor.getString(0);
+                int wakeTime = cursor.getInt(1);
+                int ht = cursor.getInt(2);
+                int lt = cursor.getInt(3);
+                int it = cursor.getInt(4);
+
+                TableRow row = new TableRow(this);
+                row.addView(buildCell(date));
+                row.addView(buildCell(DateUtils.formatTime(wakeTime)));
+                row.addView(buildCell(String.valueOf(ht)));
+                row.addView(buildCell(String.valueOf(lt)));
+                row.addView(buildCell(String.valueOf(it)));
+
+                historyTable.addView(row);
+                rows++;
+            } while (cursor.moveToNext());
+        } else if (clearTable) {
+            // Only show this if it's the first load and there's nothing in the database
+            TableRow row = new TableRow(this);
+            TextView tv = new TextView(this);
+            tv.setText("No entries yet.");
+            row.addView(tv);
+            historyTable.addView(row);
+        }
+        if (cursor != null) cursor.close();
+
+        lastLoadedRows = rows; // track for next paging
+        int totalEntries = dbHelper.getEntryCount();
+        if (historyOffset + rows < totalEntries) {
+            loadMoreBtn.setVisibility(View.VISIBLE);
+        } else {
+            loadMoreBtn.setVisibility(View.GONE);
+        }
+    }
+
+
+
+    private int getThemeColor(int attr) {
+        TypedValue typedValue = new TypedValue();
+        getTheme().resolveAttribute(attr, typedValue, true);
+        return typedValue.data;
+    }
+
+    private void addHeaderRow() {
+        TableRow headerRow = new TableRow(this);
+        int headerColor = getThemeColor(com.google.android.material.R.attr.colorSurfaceVariant);
+        headerRow.setBackgroundColor(headerColor);
+
+        headerRow.addView(buildBoldCell("Cat."));
+        headerRow.addView(buildBoldCell("Time"));
+        headerRow.addView(buildBoldCell("Target"));
+        headerRow.addView(buildBoldCell("Avg."));
+
+        statsTable.addView(headerRow);
+    }
+
+    private void appendRow(String cat, String min, String target, String avg) {
+        TableRow row = new TableRow(this);
+
+        row.addView(buildCell(cat));
+        row.addView(buildCell(min));
+        row.addView(buildCell(target));
+        row.addView(buildCell(avg));
+
+        statsTable.addView(row);
+    }
+
+    // === Cell builders ===
+
+    private TextView buildCell(String text) {
+        TextView tv = new TextView(this);
+        tv.setText(text);
+        tv.setPadding(8, 12, 8, 12);
+        tv.setGravity(Gravity.CENTER);
+        return tv;
+    }
+
+    private TextView buildBoldCell(String text) {
+        TextView tv = buildCell(text);
+        tv.setTypeface(null, android.graphics.Typeface.BOLD);
+        return tv;
+    }
+
+    /**
+     * Returns averages: [wake, ht, lt, it], or {-1, -1, -1, -1} if no data.
+     */
+    private int[] getOverallAverages() {
+        Cursor cursor = dbHelper.getAllEntries();
+        int count = 0, wakeSum = 0, htSum = 0, ltSum = 0, itSum = 0;
+
+        if (cursor != null) {
+            while (cursor.moveToNext()) {
+                wakeSum += cursor.getInt(1);
+                htSum += cursor.getInt(2);
+                ltSum += cursor.getInt(3);
+                itSum += cursor.getInt(4);
+                count++;
+            }
+            cursor.close();
+        }
+        if (count == 0) return new int[]{-1, -1, -1, -1};
+        return new int[]{
+                wakeSum / count,
+                htSum / count,
+                ltSum / count,
+                itSum / count
+        };
     }
 
     private void showMonthYearPicker() {
@@ -327,6 +356,7 @@ public class StatsActivity extends AppCompatActivity {
                     selectedMonth = String.format(Locale.getDefault(), "%04d-%02d", year, month + 1);
                     selectedPeriodText.setText("Showing: " + selectedMonth);
                     displayStatsForMonth(selectedMonth);
+                    resetHistory();
                 },
                 calendar.get(Calendar.YEAR),
                 calendar.get(Calendar.MONTH),
@@ -345,62 +375,5 @@ public class StatsActivity extends AppCompatActivity {
         }
 
         datePickerDialog.show();
-    }
-
-    private void addHeaderRow() {
-        TableRow headerRow = new TableRow(this);
-        int headerColor = getThemeColor(com.google.android.material.R.attr.colorSurfaceVariant);
-        headerRow.setBackgroundColor(headerColor);
-
-        headerRow.addView(buildBoldCell("Cat."));
-        headerRow.addView(buildBoldCell("Min"));
-        headerRow.addView(buildBoldCell("Target"));
-        headerRow.addView(buildBoldCell("Avg."));
-        headerRow.addView(buildBoldCell("Dev."));
-
-        statsTable.addView(headerRow);
-    }
-
-    private int getThemeColor(int attr) {
-        TypedValue typedValue = new TypedValue();
-        getTheme().resolveAttribute(attr, typedValue, true);
-        return typedValue.data;
-    }
-
-    private void appendRow(String cat, String min, String target, String avg, float deviation) {
-        TableRow row = new TableRow(this);
-
-        row.addView(buildCell(cat));
-        row.addView(buildCell(min));
-        row.addView(buildCell(target));
-
-        TextView avgView = buildCell(avg);
-        row.addView(avgView);  // No color logic anymore
-
-        TextView devView = buildCell(String.format(Locale.getDefault(), "%.2f%%", deviation));
-        row.addView(devView);
-
-        statsTable.addView(row);
-    }
-
-
-    private TextView buildCell(String text) {
-        TextView tv = new TextView(this);
-        tv.setText(text);
-        tv.setPadding(8, 12, 8, 12);
-        tv.setGravity(Gravity.CENTER);
-        return tv;
-    }
-
-    private TextView buildBoldCell(String text) {
-        TextView tv = buildCell(text);
-        tv.setTypeface(null, android.graphics.Typeface.BOLD);
-        return tv;
-    }
-
-    private float calculateDeviation(int value, int target) {
-        if (target == 0) return 0f;
-        float result = ((float) (value - target) / target) * 100f;
-        return result;
     }
 }

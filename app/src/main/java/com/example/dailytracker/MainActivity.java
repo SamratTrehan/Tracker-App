@@ -24,7 +24,7 @@ public class MainActivity extends AppCompatActivity {
 
     TextView wakeTimeDisplay, selectedDateText;
     EditText htInput, ltInput, itInput;
-    Button pickWakeTimeBtn, submitBtn, viewStatsBtn, exportBtn, clearAllBtn, pickDateBtn;
+    Button pickWakeTimeBtn, submitBtn, viewStatsBtn, exportBtn, clearAllBtn, pickDateBtn, editValuesBtn;
     DBHelper dbHelper;
     int wakeMinutes = -1;
     String today, selectedDate;
@@ -56,6 +56,7 @@ public class MainActivity extends AppCompatActivity {
         viewStatsBtn = findViewById(R.id.viewStatsBtn);
         exportBtn = findViewById(R.id.exportBtn);
         clearAllBtn = findViewById(R.id.clearAllBtn);
+        editValuesBtn = findViewById(R.id.editValuesBtn);
 
         dbHelper = new DBHelper(this);
 
@@ -95,10 +96,41 @@ public class MainActivity extends AppCompatActivity {
             datePickerDialog.show();
         });
 
+        editValuesBtn.setOnClickListener(view -> {
+            String date = selectedDate; // Or whichever date is currently picked
+
+            Integer wake = wakeMinutes != -1 ? wakeMinutes : null;
+            Integer ht = (!htInput.getText().toString().isEmpty())
+                    ? Integer.parseInt(htInput.getText().toString()) : null;
+            Integer lt = (!ltInput.getText().toString().isEmpty())
+                    ? Integer.parseInt(ltInput.getText().toString()) : null;
+            Integer it = (!itInput.getText().toString().isEmpty())
+                    ? Integer.parseInt(itInput.getText().toString()) : null;
+
+            if (!dbHelper.entryExists(date)) {
+                Toast.makeText(this, "No entry exists for this date to edit.", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            if (wake == null && ht == null && lt == null && it == null) {
+                Toast.makeText(this, "Enter at least one value to update.", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            boolean updated = dbHelper.updatePartialEntry(date, wake, ht, lt, it);
+
+            if (updated) {
+                Toast.makeText(this, "Entry updated successfully.", Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(this, "Error: Could not update entry.", Toast.LENGTH_SHORT).show();
+            }
+        });
+
+
         pickWakeTimeBtn.setOnClickListener(view -> {
-            Calendar now = Calendar.getInstance();
-            int hour = now.get(Calendar.HOUR_OF_DAY);
-            int minute = now.get(Calendar.MINUTE);
+            int targetWakeMinutes = TargetPreferences.getWakeTime(this);
+            int hour = targetWakeMinutes / 60;
+            int minute = targetWakeMinutes % 60;
 
             TimePickerDialog timePicker = new TimePickerDialog(this, (tp, h, m) -> {
                 wakeMinutes = h * 60 + m;
@@ -106,6 +138,7 @@ public class MainActivity extends AppCompatActivity {
             }, hour, minute, false);
             timePicker.show();
         });
+
 
         submitBtn.setOnClickListener(view -> {
             if (wakeMinutes == -1) {

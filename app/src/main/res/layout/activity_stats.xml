@@ -82,21 +82,56 @@
                 android:shrinkColumns="1,2,3,4"
                 android:background="@android:color/transparent" />
         </HorizontalScrollView>
+
         <TextView
-            android:id="@+id/graphLegend"
+            android:id="@+id/historyTitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="\nWeekly Performance"
+            android:text="Entry History"
             android:textStyle="bold"
             android:textSize="18sp"
-            android:textColor="@color/textPrimary"
-            android:layout_marginBottom="12dp"
-            android:textAlignment="center" />
-        <com.github.mikephil.charting.charts.BarChart
-            android:id="@+id/barChart"
+            android:layout_marginTop="24dp"
+            android:textColor="@color/textPrimary" />
+
+        <HorizontalScrollView
             android:layout_width="match_parent"
-            android:layout_height="300dp"
-            android:layout_marginTop="24dp"/>
+            android:layout_height="wrap_content"
+            android:fillViewport="true">
+
+            <TableLayout
+                android:id="@+id/historyTable"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:stretchColumns="1,2,3,4"
+                android:shrinkColumns="1,2,3,4"
+                android:background="@android:color/transparent" />
+        </HorizontalScrollView>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/loadMoreHistoryBtn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Load more days"
+            android:visibility="gone"
+            android:layout_gravity="center_horizontal"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_marginTop="8dp"/>
+
+        <!--<TextView
+              android:id="@+id/graphLegend"
+              android:layout_width="wrap_content"
+              android:layout_height="wrap_content"
+              android:text="\nWeekly Performance"
+              android:textStyle="bold"
+              android:textSize="18sp"
+              android:textColor="@color/textPrimary"
+              android:layout_marginBottom="12dp"
+              android:textAlignment="center" />
+          <com.github.mikephil.charting.charts.BarChart
+              android:id="@+id/barChart"
+              android:layout_width="match_parent"
+              android:layout_height="300dp"
+              android:layout_marginTop="24dp"/>-->
 
     </LinearLayout>
 </ScrollView>

@@ -57,6 +57,37 @@ public class DBHelper extends SQLiteOpenHelper {
         return exists;
     }
 
+    public Cursor getEntriesPaged(int limit, int offset) {
+        SQLiteDatabase db = getReadableDatabase();
+        return db.rawQuery("SELECT * FROM entries ORDER BY date DESC LIMIT ? OFFSET ?",
+                new String[]{String.valueOf(limit), String.valueOf(offset)});
+    }
+
+    public int getEntryCount() {
+        SQLiteDatabase db = getReadableDatabase();
+        Cursor c = db.rawQuery("SELECT COUNT(*) FROM entries", null);
+        int count = 0;
+        if (c.moveToFirst()) count = c.getInt(0);
+        c.close();
+        return count;
+    }
+
+    // Only updates the columns that are not null (user changed)
+    public boolean updatePartialEntry(String date, Integer wake, Integer ht, Integer lt, Integer it) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        ContentValues values = new ContentValues();
+
+        if (wake != null) values.put("wake_time", wake);
+        if (ht != null) values.put("ht", ht);
+        if (lt != null) values.put("lt", lt);
+        if (it != null) values.put("it", it);
+
+        if (values.size() == 0) return false; // Nothing to update
+
+        int rows = db.update("entries", values, "date = ?", new String[]{date});
+        return rows == 1;
+    }
+
 
     public Cursor getAllEntries() {
         SQLiteDatabase db = getReadableDatabase();
