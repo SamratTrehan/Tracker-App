@@ -14,13 +14,12 @@ public class TargetSetupActivity extends AppCompatActivity {
 
     TextView instructionText, wakeTimeDisplay;
     Button pickWakeTimeBtn, saveBtn;
-    EditText htInput, ltInput, itInput;
+    EditText htInput, ltInput, itInput, ftInput; // FT added
     int wakeMinutes = 7 * 60; // Default to 7:00 AM
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);
-
 
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_target_setup);
@@ -31,17 +30,18 @@ public class TargetSetupActivity extends AppCompatActivity {
         htInput = findViewById(R.id.htInput);
         ltInput = findViewById(R.id.ltInput);
         itInput = findViewById(R.id.itInput);
+        ftInput = findViewById(R.id.ftInput); // FT field
         saveBtn = findViewById(R.id.saveBtn);
 
         wakeTimeDisplay.setText("Wake-up Time: " + DateUtils.formatTime(wakeMinutes));
         htInput.setText("60");
         ltInput.setText("120");
         itInput.setText("180");
+        ftInput.setText("60"); // Default FT
 
         pickWakeTimeBtn.setOnClickListener(v -> {
             int hour = wakeMinutes / 60;
             int minute = wakeMinutes % 60;
-
             TimePickerDialog timePicker = new TimePickerDialog(this, (tp, h, m) -> {
                 wakeMinutes = h * 60 + m;
                 wakeTimeDisplay.setText("Wake-up Time: " + DateUtils.formatTime(h, m));
@@ -54,8 +54,9 @@ public class TargetSetupActivity extends AppCompatActivity {
                 int ht = Integer.parseInt(htInput.getText().toString());
                 int lt = Integer.parseInt(ltInput.getText().toString());
                 int it = Integer.parseInt(itInput.getText().toString());
+                int ft = Integer.parseInt(ftInput.getText().toString()); // FT handling
 
-                TargetPreferences.saveTargets(this, wakeMinutes, ht, lt, it);
+                TargetPreferences.saveTargets(this, wakeMinutes, ht, lt, it, ft);
 
                 SharedPreferences prefs = getSharedPreferences("app_prefs", MODE_PRIVATE);
                 prefs.edit().putBoolean("setup_done", true).apply();

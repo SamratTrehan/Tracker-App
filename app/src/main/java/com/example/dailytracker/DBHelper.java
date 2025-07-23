@@ -9,7 +9,7 @@ import android.util.Log;
 
 public class DBHelper extends SQLiteOpenHelper {
     private static final String DB_NAME = "tracker.db";
-    private static final int DB_VERSION = 1;
+    private static final int DB_VERSION = 2;
 
     public DBHelper(Context context) {
         super(context, DB_NAME, null, DB_VERSION);
@@ -22,16 +22,24 @@ public class DBHelper extends SQLiteOpenHelper {
                 "wake_time INTEGER, " +
                 "ht INTEGER, " +
                 "lt INTEGER, " +
-                "it INTEGER)");
+                "it INTEGER, " +         // <-- you forgot a comma here!
+                "ft INTEGER)");          // <-- FT now in schema
     }
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-        db.execSQL("DROP TABLE IF EXISTS entries");
-        onCreate(db);
+        if (oldVersion < 2) {
+            db.execSQL("ALTER TABLE entries ADD COLUMN ft INTEGER DEFAULT 0");
+        }
     }
 
+    // Updated: Insert with FT (default to 0 for backward compat)
     public boolean insertEntry(String date, int wake, int ht, int lt, int it) {
+        return insertEntry(date, wake, ht, lt, it, 0); // FT default to zero
+    }
+
+    // Overload: Insert with FT specified
+    public boolean insertEntry(String date, int wake, int ht, int lt, int it, int ft) {
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues contentValues = new ContentValues();
         contentValues.put("date", date);
@@ -39,6 +47,7 @@ public class DBHelper extends SQLiteOpenHelper {
         contentValues.put("ht", ht);
         contentValues.put("lt", lt);
         contentValues.put("it", it);
+        contentValues.put("ft", ft);
         long result = db.insert("entries", null, contentValues);
         if (result == -1) {
             Log.e("DBHelper", "Failed to insert: " + date + ", wake=" + wake);
@@ -57,6 +66,36 @@ public class DBHelper extends SQLiteOpenHelper {
         return exists;
     }
 
+    // NEW: Partial update that includes FT (null-safe)
+    public boolean updatePartialEntry(String date, Integer wake, Integer ht, Integer lt, Integer it, Integer ft) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        ContentValues values = new ContentValues();
+
+        if (wake != null) values.put("wake_time", wake);
+        if (ht != null) values.put("ht", ht);
+        if (lt != null) values.put("lt", lt);
+        if (it != null) values.put("it", it);
+        if (ft != null) values.put("ft", ft);
+
+        if (values.size() == 0) return false; // Nothing to update
+
+        int rows = db.update("entries", values, "date = ?", new String[]{date});
+        return rows == 1;
+    }
+
+    // Convenience: Update entry with ALL values present (useful for fullscreen editing)
+    public boolean updateEntry(String date, int wake, int ht, int lt, int it, int ft) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.put("wake_time", wake);
+        values.put("ht", ht);
+        values.put("lt", lt);
+        values.put("it", it);
+        values.put("ft", ft);
+        int rows = db.update("entries", values, "date = ?", new String[]{date});
+        return rows == 1;
+    }
+
     public Cursor getEntriesPaged(int limit, int offset) {
         SQLiteDatabase db = getReadableDatabase();
         return db.rawQuery("SELECT * FROM entries ORDER BY date DESC LIMIT ? OFFSET ?",
@@ -71,23 +110,6 @@ public class DBHelper extends SQLiteOpenHelper {
         c.close();
         return count;
     }
-
-    // Only updates the columns that are not null (user changed)
-    public boolean updatePartialEntry(String date, Integer wake, Integer ht, Integer lt, Integer it) {
-        SQLiteDatabase db = this.getWritableDatabase();
-        ContentValues values = new ContentValues();
-
-        if (wake != null) values.put("wake_time", wake);
-        if (ht != null) values.put("ht", ht);
-        if (lt != null) values.put("lt", lt);
-        if (it != null) values.put("it", it);
-
-        if (values.size() == 0) return false; // Nothing to update
-
-        int rows = db.update("entries", values, "date = ?", new String[]{date});
-        return rows == 1;
-    }
-
 
     public Cursor getAllEntries() {
         SQLiteDatabase db = getReadableDatabase();

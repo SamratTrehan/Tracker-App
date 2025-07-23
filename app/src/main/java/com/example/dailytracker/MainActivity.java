@@ -23,7 +23,7 @@ import java.util.Locale;
 public class MainActivity extends AppCompatActivity {
 
     TextView wakeTimeDisplay, selectedDateText;
-    EditText htInput, ltInput, itInput;
+    EditText htInput, ltInput, itInput, ftInput;
     Button pickWakeTimeBtn, submitBtn, viewStatsBtn, exportBtn, clearAllBtn, pickDateBtn, editValuesBtn;
     DBHelper dbHelper;
     int wakeMinutes = -1;
@@ -31,9 +31,7 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-
         AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);
-
         super.onCreate(savedInstanceState);
 
         SharedPreferences prefs = getSharedPreferences("app_prefs", MODE_PRIVATE);
@@ -52,6 +50,7 @@ public class MainActivity extends AppCompatActivity {
         htInput = findViewById(R.id.htInput);
         ltInput = findViewById(R.id.ltInput);
         itInput = findViewById(R.id.itInput);
+        ftInput = findViewById(R.id.ftInput);
         submitBtn = findViewById(R.id.submitBtn);
         viewStatsBtn = findViewById(R.id.viewStatsBtn);
         exportBtn = findViewById(R.id.exportBtn);
@@ -61,7 +60,6 @@ public class MainActivity extends AppCompatActivity {
         dbHelper = new DBHelper(this);
 
         wakeTimeDisplay.setText("Select Wake-up Time");
-
         selectedDateText = findViewById(R.id.selectedDateText);
         pickDateBtn = findViewById(R.id.pickDateBtn);
 
@@ -97,7 +95,7 @@ public class MainActivity extends AppCompatActivity {
         });
 
         editValuesBtn.setOnClickListener(view -> {
-            String date = selectedDate; // Or whichever date is currently picked
+            String date = selectedDate;
 
             Integer wake = wakeMinutes != -1 ? wakeMinutes : null;
             Integer ht = (!htInput.getText().toString().isEmpty())
@@ -106,18 +104,20 @@ public class MainActivity extends AppCompatActivity {
                     ? Integer.parseInt(ltInput.getText().toString()) : null;
             Integer it = (!itInput.getText().toString().isEmpty())
                     ? Integer.parseInt(itInput.getText().toString()) : null;
+            Integer ft = (!ftInput.getText().toString().isEmpty())
+                    ? Integer.parseInt(ftInput.getText().toString()) : null;
 
             if (!dbHelper.entryExists(date)) {
                 Toast.makeText(this, "No entry exists for this date to edit.", Toast.LENGTH_SHORT).show();
                 return;
             }
 
-            if (wake == null && ht == null && lt == null && it == null) {
+            if (wake == null && ht == null && lt == null && it == null && ft == null) {
                 Toast.makeText(this, "Enter at least one value to update.", Toast.LENGTH_SHORT).show();
                 return;
             }
 
-            boolean updated = dbHelper.updatePartialEntry(date, wake, ht, lt, it);
+            boolean updated = dbHelper.updatePartialEntry(date, wake, ht, lt, it, ft);
 
             if (updated) {
                 Toast.makeText(this, "Entry updated successfully.", Toast.LENGTH_SHORT).show();
@@ -125,7 +125,6 @@ public class MainActivity extends AppCompatActivity {
                 Toast.makeText(this, "Error: Could not update entry.", Toast.LENGTH_SHORT).show();
             }
         });
-
 
         pickWakeTimeBtn.setOnClickListener(view -> {
             int targetWakeMinutes = TargetPreferences.getWakeTime(this);
@@ -139,7 +138,6 @@ public class MainActivity extends AppCompatActivity {
             timePicker.show();
         });
 
-
         submitBtn.setOnClickListener(view -> {
             if (wakeMinutes == -1) {
                 Toast.makeText(this, "Please pick wake-up time", Toast.LENGTH_SHORT).show();
@@ -147,12 +145,13 @@ public class MainActivity extends AppCompatActivity {
             }
 
             String date = selectedDate;
-            int ht, lt, it;
+            int ht, lt, it, ft;
 
             try {
                 ht = Integer.parseInt(htInput.getText().toString());
                 lt = Integer.parseInt(ltInput.getText().toString());
                 it = Integer.parseInt(itInput.getText().toString());
+                ft = Integer.parseInt(ftInput.getText().toString());
             } catch (Exception e) {
                 Toast.makeText(this, "Please enter all values", Toast.LENGTH_SHORT).show();
                 return;
@@ -161,7 +160,7 @@ public class MainActivity extends AppCompatActivity {
             if (dbHelper.entryExists(date)) {
                 Toast.makeText(this, "Entry already exists!", Toast.LENGTH_SHORT).show();
             } else {
-                boolean inserted = dbHelper.insertEntry(date, wakeMinutes, ht, lt, it);
+                boolean inserted = dbHelper.insertEntry(date, wakeMinutes, ht, lt, it, ft);
                 Toast.makeText(this, inserted ? "Data Saved" : "Error saving data", Toast.LENGTH_SHORT).show();
             }
         });

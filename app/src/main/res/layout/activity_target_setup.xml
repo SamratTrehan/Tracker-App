@@ -97,6 +97,17 @@
                 <com.google.android.material.textfield.TextInputLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:hint="Family Time Target (minutes)">
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/ftInput"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="number" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
                     android:hint="Learning Time (minutes)">
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/ltInput"
@@ -129,7 +140,7 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="• Health Time (HT): Exercise, walking, yoga, etc.\n\n• Learning Time (LT): Reading, tutorials, studying new topics.\n\n• Implementation Time (IT): Applying knowledge in practical work, building, coding, etc."
+            android:text="• Health Time (HT): Exercise, walking, yoga, etc.\n\n• Learning Time (LT): Reading, tutorials, studying new topics.\n\n• Implementation Time (IT): Applying knowledge in practical work, building, coding, etc.\n\n• Family Time (FT): Spending quality time with family, conversations, shared activities, etc."
             android:textSize="14sp"
             android:paddingTop="8dp"
             android:textColor="@color/textSecondary" />

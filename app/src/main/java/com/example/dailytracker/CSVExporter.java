@@ -36,14 +36,21 @@ public class CSVExporter {
 
                 if (out != null) {
                     StringBuilder sb = new StringBuilder();
-                    sb.append("Date,Wake Time,HT,LT,IT\n");
+                    sb.append("Date,Wake Time,HT,LT,IT,FT\n"); // FT added to header
 
                     while (cursor.moveToNext()) {
                         sb.append(cursor.getString(0)).append(",") // date
                                 .append(DateUtils.formatTime(cursor.getInt(1))).append(",") // wake_time
                                 .append(cursor.getInt(2)).append(",") // HT
                                 .append(cursor.getInt(3)).append(",") // LT
-                                .append(cursor.getInt(4)).append("\n"); // IT
+                                .append(cursor.getInt(4)).append(","); // IT
+
+                        // FT
+                        if (cursor.getColumnCount() > 5 && !cursor.isNull(5)) {
+                            sb.append(cursor.getInt(5));
+                        }
+                        // else: if old row, FT column blank
+                        sb.append("\n");
                     }
 
                     out.write(sb.toString().getBytes());

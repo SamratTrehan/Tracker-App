@@ -2,7 +2,6 @@ package com.example.dailytracker;
 
 import android.app.DatePickerDialog;
 import android.database.Cursor;
-import android.graphics.Color;
 import android.os.Bundle;
 import android.util.TypedValue;
 import android.view.Gravity;
@@ -14,7 +13,6 @@ import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
-
 import com.google.android.material.button.MaterialButton;
 
 import java.util.Calendar;
@@ -32,10 +30,10 @@ public class StatsActivity extends AppCompatActivity {
     String selectedDate;
     String selectedMonth;
 
-    // Paging state for history section
+    // Paging state
     private static final int HISTORY_PAGE_SIZE = 30;
     private int historyOffset = 0;
-    private int lastLoadedRows = 0; // for tracking how many were loaded last
+    private int lastLoadedRows = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -81,34 +79,36 @@ public class StatsActivity extends AppCompatActivity {
 
         btnMonth.setOnClickListener(v -> showMonthYearPicker());
 
-        // Load stats and history (first 30) on opening page
         displayStatsForDay(selectedDate);
         resetHistory();
 
         loadMoreBtn.setOnClickListener(v -> {
-            historyOffset += lastLoadedRows; // move offset forward by how many we just loaded
+            historyOffset += lastLoadedRows;
             displayHistorySection(false);
         });
     }
 
     private void resetHistory() {
         historyOffset = 0;
-        displayHistorySection(true); // true = full refresh (clear table)
+        displayHistorySection(true);
     }
 
-    // ===== MAIN/DAY STATS LOGIC =====
+    // ===== MAIN/DAY STATS LOGIC WITH FT =====
 
     private void displayStatsForDay(String date) {
         statsTable.removeAllViews();
 
         Cursor cursor = dbHelper.getEntryByDate(date);
 
-        int wake = -1, ht = -1, lt = -1, it = -1;
+        int wake = -1, ht = -1, lt = -1, it = -1, ft = -1;
         if (cursor != null && cursor.moveToFirst()) {
             wake = cursor.getInt(1);
             ht = cursor.getInt(2);
             lt = cursor.getInt(3);
             it = cursor.getInt(4);
+            if (cursor.getColumnCount() > 5) {
+                ft = cursor.isNull(5) ? -1 : cursor.getInt(5);
+            }
         }
         if (cursor != null) cursor.close();
 
@@ -116,10 +116,11 @@ public class StatsActivity extends AppCompatActivity {
         int targetHT = TargetPreferences.getHT(this);
         int targetLT = TargetPreferences.getLT(this);
         int targetIT = TargetPreferences.getIT(this);
+        int targetFT = TargetPreferences.getFT(this);// If you implement FT targets, fetch here.
 
         addHeaderRow();
 
-        int[] averages = getOverallAverages(); // [wake, ht, lt, it]
+        int[] averages = getOverallAverages(); // [wake, ht, lt, it, ft]
 
         if (wake == -1) {
             TableRow row = new TableRow(this);
@@ -138,6 +139,11 @@ public class StatsActivity extends AppCompatActivity {
                     targetHT + " mins",
                     averages[1] + " mins");
 
+            appendRow("FT",
+                    (ft == -1 ? "" : ft + " mins"),
+                    (targetFT == -1 ? "" : targetFT + " mins"),
+                    (averages[4] == -1 ? "" : averages[4] + " mins"));
+
             appendRow("LT",
                     lt + " mins",
                     targetLT + " mins",
@@ -147,10 +153,11 @@ public class StatsActivity extends AppCompatActivity {
                     it + " mins",
                     targetIT + " mins",
                     averages[3] + " mins");
+
         }
     }
 
-    // ===== MONTH STATS LOGIC UNCHANGED =====
+    // ===== MONTHLY STATS LOGIC WITH FT =====
 
     private void displayStatsForMonth(String month) {
         statsTable.removeAllViews();
@@ -158,13 +165,18 @@ public class StatsActivity extends AppCompatActivity {
         Cursor cursor = dbHelper.getEntriesForMonth(month);
 
         int count = 0;
-        int totalWake = 0, totalHT = 0, totalLT = 0, totalIT = 0;
+        int totalWake = 0, totalHT = 0, totalLT = 0, totalIT = 0, totalFT = 0, countFT = 0;
 
         while (cursor.moveToNext()) {
             totalWake += cursor.getInt(1);
             totalHT += cursor.getInt(2);
             totalLT += cursor.getInt(3);
             totalIT += cursor.getInt(4);
+            int colCount = cursor.getColumnCount();
+            if (colCount > 5 && !cursor.isNull(5)) {
+                totalFT += cursor.getInt(5);
+                countFT++;
+            }
             count++;
         }
         cursor.close();
@@ -182,11 +194,13 @@ public class StatsActivity extends AppCompatActivity {
             int avgHT = totalHT / count;
             int avgLT = totalLT / count;
             int avgIT = totalIT / count;
+            int avgFT = (countFT > 0) ? (totalFT / countFT) : -1;
 
             int targetWake = TargetPreferences.getWakeTime(this);
             int targetHT = TargetPreferences.getHT(this);
             int targetLT = TargetPreferences.getLT(this);
             int targetIT = TargetPreferences.getIT(this);
+            int targetFT = TargetPreferences.getFT(this);// If implementing FT targets
 
             appendRow("WT",
                     "--",
@@ -198,6 +212,11 @@ public class StatsActivity extends AppCompatActivity {
                     targetHT + " mins",
                     avgHT + " mins");
 
+            appendRow("FT",
+                    "--",
+                    (targetFT == -1 ? "" : targetFT + " mins"),
+                    (avgFT == -1 ? "" : avgFT + " mins"));
+
             appendRow("LT",
                     "--",
                     targetLT + " mins",
@@ -207,15 +226,12 @@ public class StatsActivity extends AppCompatActivity {
                     "--",
                     targetIT + " mins",
                     avgIT + " mins");
+
         }
     }
 
-    // ===== HISTORY SECTION WITH APPEND =====
+    // ===== HISTORY SECTION WITH APPEND & FT =====
 
-    /**
-     * @param clearTable If true, clear the table and start fresh.
-     *                   If false, just append to existing rows.
-     */
     private void displayHistorySection(boolean clearTable) {
         if (clearTable) {
             historyTable.removeAllViews();
@@ -226,14 +242,14 @@ public class StatsActivity extends AppCompatActivity {
             header.addView(buildBoldCell("Date"));
             header.addView(buildBoldCell("Wake-Up"));
             header.addView(buildBoldCell("HT (min)"));
+            header.addView(buildBoldCell("FT (min)"));
             header.addView(buildBoldCell("LT (min)"));
-            header.addView(buildBoldCell("IT (min)"));
+            header.addView(buildBoldCell("IT (min)")); // New column
             historyTable.addView(header);
 
-            historyOffset = 0; // reset paging
+            historyOffset = 0;
         }
 
-        // Load next page of rows from current offset
         Cursor cursor = dbHelper.getEntriesPaged(HISTORY_PAGE_SIZE, historyOffset);
 
         int rows = 0;
@@ -244,19 +260,19 @@ public class StatsActivity extends AppCompatActivity {
                 int ht = cursor.getInt(2);
                 int lt = cursor.getInt(3);
                 int it = cursor.getInt(4);
+                int ft = (cursor.getColumnCount() > 5 && !cursor.isNull(5)) ? cursor.getInt(5) : -1;
 
                 TableRow row = new TableRow(this);
-                row.addView(buildCell(date));
+                row.addView(buildCell(formatHistoryDate(date)));
                 row.addView(buildCell(DateUtils.formatTime(wakeTime)));
                 row.addView(buildCell(String.valueOf(ht)));
+                row.addView(buildCell((ft == -1 ? "" : String.valueOf(ft))));
                 row.addView(buildCell(String.valueOf(lt)));
                 row.addView(buildCell(String.valueOf(it)));
-
                 historyTable.addView(row);
                 rows++;
             } while (cursor.moveToNext());
         } else if (clearTable) {
-            // Only show this if it's the first load and there's nothing in the database
             TableRow row = new TableRow(this);
             TextView tv = new TextView(this);
             tv.setText("No entries yet.");
@@ -265,7 +281,7 @@ public class StatsActivity extends AppCompatActivity {
         }
         if (cursor != null) cursor.close();
 
-        lastLoadedRows = rows; // track for next paging
+        lastLoadedRows = rows;
         int totalEntries = dbHelper.getEntryCount();
         if (historyOffset + rows < totalEntries) {
             loadMoreBtn.setVisibility(View.VISIBLE);
@@ -274,7 +290,17 @@ public class StatsActivity extends AppCompatActivity {
         }
     }
 
-
+    // ===== Utility: Format YYYY-MM-DD to DD-MM-YY =====
+    private String formatHistoryDate(String date) {
+        try {
+            java.text.SimpleDateFormat from = new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault());
+            java.text.SimpleDateFormat to = new java.text.SimpleDateFormat("dd-MM-yy", java.util.Locale.getDefault());
+            java.util.Date d = from.parse(date);
+            return to.format(d);
+        } catch (Exception e) {
+            return date;
+        }
+    }
 
     private int getThemeColor(int attr) {
         TypedValue typedValue = new TypedValue();
@@ -297,16 +323,12 @@ public class StatsActivity extends AppCompatActivity {
 
     private void appendRow(String cat, String min, String target, String avg) {
         TableRow row = new TableRow(this);
-
         row.addView(buildCell(cat));
         row.addView(buildCell(min));
         row.addView(buildCell(target));
         row.addView(buildCell(avg));
-
         statsTable.addView(row);
     }
-
-    // === Cell builders ===
 
     private TextView buildCell(String text) {
         TextView tv = new TextView(this);
@@ -315,42 +337,43 @@ public class StatsActivity extends AppCompatActivity {
         tv.setGravity(Gravity.CENTER);
         return tv;
     }
-
     private TextView buildBoldCell(String text) {
         TextView tv = buildCell(text);
         tv.setTypeface(null, android.graphics.Typeface.BOLD);
         return tv;
     }
 
-    /**
-     * Returns averages: [wake, ht, lt, it], or {-1, -1, -1, -1} if no data.
-     */
+    /** Returns averages: [wake, ht, lt, it, ft], or ...,-1 if none for that metric */
     private int[] getOverallAverages() {
         Cursor cursor = dbHelper.getAllEntries();
-        int count = 0, wakeSum = 0, htSum = 0, ltSum = 0, itSum = 0;
-
+        int count = 0, wakeSum = 0, htSum = 0, ltSum = 0, itSum = 0, ftSum = 0, countFT = 0;
         if (cursor != null) {
             while (cursor.moveToNext()) {
                 wakeSum += cursor.getInt(1);
                 htSum += cursor.getInt(2);
                 ltSum += cursor.getInt(3);
                 itSum += cursor.getInt(4);
+                int colCount = cursor.getColumnCount();
+                if (colCount > 5 && !cursor.isNull(5)) {
+                    ftSum += cursor.getInt(5);
+                    countFT++;
+                }
                 count++;
             }
             cursor.close();
         }
-        if (count == 0) return new int[]{-1, -1, -1, -1};
+        if (count == 0) return new int[]{-1, -1, -1, -1, -1};
         return new int[]{
                 wakeSum / count,
                 htSum / count,
                 ltSum / count,
-                itSum / count
+                itSum / count,
+                (countFT > 0 ? ftSum / countFT : -1)
         };
     }
 
     private void showMonthYearPicker() {
         Calendar calendar = Calendar.getInstance();
-
         DatePickerDialog datePickerDialog = new DatePickerDialog(this,
                 (view, year, month, dayOfMonth) -> {
                     selectedMonth = String.format(Locale.getDefault(), "%04d-%02d", year, month + 1);
@@ -361,7 +384,6 @@ public class StatsActivity extends AppCompatActivity {
                 calendar.get(Calendar.YEAR),
                 calendar.get(Calendar.MONTH),
                 calendar.get(Calendar.DAY_OF_MONTH));
-
         try {
             java.lang.reflect.Field[] datePickerFields = datePickerDialog.getDatePicker().getClass().getDeclaredFields();
             for (java.lang.reflect.Field field : datePickerFields) {
@@ -371,9 +393,7 @@ public class StatsActivity extends AppCompatActivity {
                     ((View) dayPicker).setVisibility(View.GONE);
                 }
             }
-        } catch (Exception ignored) {
-        }
-
+        } catch (Exception ignored) {}
         datePickerDialog.show();
     }
 }
